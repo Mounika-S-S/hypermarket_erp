@@ -117,3 +117,33 @@ app.*.symbols
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+
+# Flutter
+.dart_tool/
+.pub/
+build/
+.packages
+    
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+*.jks
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+
+
+
