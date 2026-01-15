@@ -111,5 +111,11 @@ class DatabaseHelper {
         .map((e) => InventoryTransaction.fromMap(e))
         .toList();
   }
+  Future<void> insertInventoryTransaction(
+    InventoryTransaction transaction) async {
+  final db = await database;
+  await db.insert('inventory_transactions', transaction.toMap());
+}
+
 }
   

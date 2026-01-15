@@ -28,28 +28,41 @@ class _SalesScreenState extends State<SalesScreen> {
     setState(() => products = data);
   }
 
-  Future<void> submitSale() async {
-    if (selectedProduct == null) return;
+ Future<void> submitSale() async {
+  if (selectedProduct == null) return;
 
-    final qty = int.parse(qtyController.text);
+  final qty = int.tryParse(qtyController.text) ?? 0;
+  if (qty <= 0) return;
 
-    // Reduce stock
-    selectedProduct!.stock -= qty;
-    await DatabaseHelper.instance.updateProduct(selectedProduct!);
-
-    // Insert sale
-    await DatabaseHelper.instance.insertSale(
-      Sale(
-        productId: selectedProduct!.id!,
-        quantity: qty,
-        price: selectedProduct!.price,
-        total: selectedProduct!.price * qty,
-        createdAt: DateTime.now().toIso8601String(),
+  // 🚫 Prevent negative stock
+  if (qty > selectedProduct!.stock) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Insufficient stock"),
+        backgroundColor: Colors.red,
       ),
     );
-
-    Navigator.pop(context);
+    return;
   }
+
+  // Reduce stock
+  selectedProduct!.stock -= qty;
+  await DatabaseHelper.instance.updateProduct(selectedProduct!);
+
+  // Record sale
+  await DatabaseHelper.instance.insertSale(
+    Sale(
+      productId: selectedProduct!.id!,
+      quantity: qty,
+      price: selectedProduct!.price,
+      total: selectedProduct!.price * qty,
+      createdAt: DateTime.now().toIso8601String(),
+    ),
+  );
+
+  Navigator.pop(context);
+}
+
 
   @override
   Widget build(BuildContext context) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'product_screen.dart';
 import 'sales_screen.dart';
+import 'inventory_screen.dart';
 
 
 class HomeScreen extends StatelessWidget {
@@ -29,7 +30,15 @@ class HomeScreen extends StatelessWidget {
       MaterialPageRoute(builder: (_) => const SalesScreen()),
     );
   }),
+
+  _card(context, "Inventory", Icons.store, () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const InventoryScreen()),
+    );
+  }),
 ],
+
 
 
       ),
