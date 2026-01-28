@@ -3,7 +3,7 @@ import 'package:hypermarket_erp/main.dart';
 
 void main() {
   testWidgets('App launches without crashing', (WidgetTester tester) async {
-    await tester.pumpWidget(const HypermarketERP());
-    expect(find.text('Hypermarket ERP'), findsOneWidget);
+    expect(find.text('Login'), findsOneWidget);
+
   });
 }
