@@ -1,28 +1,23 @@
 import 'package:flutter/material.dart';
-
-import 'sales/sales_screen.dart';
-import 'auth/login_screen.dart';
+import './auth/login_screen.dart';
+import 'inventory/inventory_screen.dart';
+import './sales/sales_screen.dart';
 
 void main() {
-  runApp(const HypermarketERP());
+  runApp(MyApp());
 }
 
-class HypermarketERP extends StatelessWidget {
-  const HypermarketERP({super.key});
-
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Hypermarket ERP',
       debugShowCheckedModeBanner: false,
-
-      // Default screen (after auth you can change this)
-      home: const SalesScreen(),
-
-      // ❌ DO NOT ADD /inventory here because it needs storeId
+      initialRoute: "/",
       routes: {
-        '/login': (_) => const LoginScreen(),
-        '/sales': (_) => const SalesScreen(),
+        "/": (context) => LoginScreen(),
+        "/inventory": (context) => InventoryScreen(),
+        "/sales": (context) => SalesScreen(),
       },
     );
   }

@@ -2,36 +2,37 @@ import 'package:flutter/material.dart';
 import 'auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
-
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  _LoginScreenState createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final emailCtrl = TextEditingController();
-  final passwordCtrl = TextEditingController();
-  bool loading = false;
+  final _username = TextEditingController();
+  final _password = TextEditingController();
+  final AuthService _auth = AuthService();
 
-  Future<void> handleLogin() async {
-  setState(() => loading = true);
-
-  final success = await AuthService.login(
-    emailCtrl.text.trim(),
-    passwordCtrl.text.trim(),
-  );
-
-  setState(() => loading = false);
-
-  if (!mounted) return;
-
-  if (success) {
-    // All roles go to POS for now
-    Navigator.pushReplacementNamed(context, '/sales');
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invalid credentials')),
+void _login() async {
+  try {
+    final role = await _auth.login(
+      _username.text.trim(),
+      _password.text.trim(),
     );
+
+    print("ROLE: $role");
+
+    if (!mounted) return;
+
+    if (role == "ADMIN" || role == "MANAGER") {
+      Navigator.pushReplacementNamed(context, "/inventory");
+    } else if (role == "EMPLOYEE") {
+      Navigator.pushReplacementNamed(context, "/sales");
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Invalid credentials")),
+      );
+    }
+  } catch (e) {
+    print("LOGIN ERROR: $e");
   }
 }
 
@@ -39,27 +40,15 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(title: Text("Login")),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(
-              controller: emailCtrl,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: passwordCtrl,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: loading ? null : handleLogin,
-              child: loading
-                  ? const CircularProgressIndicator()
-                  : const Text('Login'),
-            ),
+            TextField(controller: _username, decoration: InputDecoration(labelText: "Username")),
+            TextField(controller: _password, obscureText: true, decoration: InputDecoration(labelText: "Password")),
+            SizedBox(height: 20),
+            ElevatedButton(onPressed: _login, child: Text("Login"))
           ],
         ),
       ),

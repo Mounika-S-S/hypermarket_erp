@@ -1,112 +1,118 @@
 import 'package:flutter/material.dart';
-
-import '../inventory/inventory_screen.dart';
+import '../core/storage/secure_storage.dart';
 import 'sales_service.dart';
 
 class SalesScreen extends StatefulWidget {
-  const SalesScreen({super.key});
+  const SalesScreen({Key? key}) : super(key: key);
 
   @override
   State<SalesScreen> createState() => _SalesScreenState();
 }
 
 class _SalesScreenState extends State<SalesScreen> {
-  final _storeController = TextEditingController();
-  final _productController = TextEditingController();
-  final _qtyController = TextEditingController();
+  final SalesService _service = SalesService();
 
-  final List<_CartItem> _cart = [];
-  bool _loading = false;
+  String? selectedBranch;
+  List<Map<String, dynamic>> branches = [];
+  List<Map<String, dynamic>> products = [];
+  List<Map<String, dynamic>> cart = [];
 
-  void _addToCart() {
-    final productId = _productController.text.trim();
-    final qty = int.tryParse(_qtyController.text);
+  Map<String, dynamic>? selectedProduct;
 
-    if (productId.isEmpty || qty == null || qty <= 0) {
-      _showMessage('Enter valid product and quantity');
-      return;
-    }
+  final TextEditingController quantityController =
+      TextEditingController();
 
-    setState(() {
-      _cart.add(_CartItem(productId: productId, quantity: qty));
-    });
-
-    _productController.clear();
-    _qtyController.clear();
+  @override
+  void initState() {
+    super.initState();
+    loadBranches();
   }
 
-  void _removeItem(int index) {
-    setState(() {
-      _cart.removeAt(index);
-    });
+  Future<void> loadBranches() async {
+    final data = await _service.getBranches();
+    branches = List<Map<String, dynamic>>.from(data);
+    setState(() {});
   }
 
-  Future<void> _completeSale() async {
-    final storeId = _storeController.text.trim();
+  Future<void> fetchProducts() async {
+    if (selectedBranch == null) return;
+    final data = await _service.getProducts(selectedBranch!);
+    products = List<Map<String, dynamic>>.from(data);
+    setState(() {});
+  }
 
-    if (storeId.isEmpty) {
-      _showMessage('Store ID is required');
+  double get grandTotal {
+    return cart.fold(
+      0.0,
+      (sum, item) => sum + (item["lineTotal"] as double),
+    );
+  }
+
+  void addToCart() {
+    if (selectedProduct == null) return;
+
+    if (quantityController.text.isEmpty) return;
+
+    final int qty = int.parse(quantityController.text);
+
+    final int availableQty = selectedProduct!["quantity"];
+
+    if (qty > availableQty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Quantity exceeds stock")),
+      );
       return;
     }
 
-    if (_cart.isEmpty) {
-      _showMessage('Cart is empty');
-      return;
-    }
+    final double unitPrice =
+        (selectedProduct!["unitPrice"] as num).toDouble();
 
-    setState(() => _loading = true);
+    final double lineTotal = qty * unitPrice;
 
-    final success = await SalesService.createSale(
-      storeId,
-      _cart
-          .map((item) => {
-                'product_id': item.productId,
-                'quantity': item.quantity,
+    cart.add({
+      "productId": selectedProduct!["_id"],
+      "quantity": qty,
+      "lineTotal": lineTotal,
+    });
+
+    quantityController.clear();
+
+    setState(() {});
+  }
+
+  Future<void> submitSale() async {
+    if (selectedBranch == null || cart.isEmpty) return;
+
+    final response = await _service.createSale({
+      "branchId": selectedBranch,
+      "items": cart
+          .map((e) => {
+                "productId": e["productId"],
+                "quantity": e["quantity"],
               })
           .toList(),
-    );
+    });
 
-    setState(() => _loading = false);
-
-    if (success) {
-      setState(() => _cart.clear());
-      _showMessage('Sale completed successfully');
-    } else {
-      _showMessage('Sale failed. Check stock or network.');
-    }
-  }
-
-  void _openInventory() {
-    final storeId = _storeController.text.trim();
-
-    if (storeId.isEmpty) {
-      _showMessage('Enter Store ID first');
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => InventoryScreen(storeId: storeId),
-      ),
-    );
-  }
-
-  void _showMessage(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
+      SnackBar(content: Text("Total: ₹${response["totalAmount"]}")),
     );
+
+    cart.clear();
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('POS / Sales'),
+        title: const Text("Sales"),
         actions: [
           IconButton(
-            icon: const Icon(Icons.inventory),
-            onPressed: _openInventory,
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await SecureStorage().clear();
+              Navigator.pushReplacementNamed(context, "/");
+            },
           ),
         ],
       ),
@@ -114,81 +120,80 @@ class _SalesScreenState extends State<SalesScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(
-              controller: _storeController,
-              decoration: const InputDecoration(labelText: 'Store ID'),
-            ),
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _productController,
-                    decoration:
-                        const InputDecoration(labelText: 'Product ID'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 90,
-                  child: TextField(
-                    controller: _qtyController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Qty'),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _loading ? null : _addToCart,
-              child: const Text('Add to Cart'),
+            DropdownButton<String>(
+              hint: const Text("Select Branch"),
+              value: selectedBranch,
+              isExpanded: true,
+              items: branches.map((b) {
+                return DropdownMenuItem<String>(
+                  value: b["_id"],
+                  child: Text(b["name"]),
+                );
+              }).toList(),
+              onChanged: (value) {
+                selectedBranch = value;
+                fetchProducts();
+              },
             ),
 
             const SizedBox(height: 20),
-            Expanded(
-              child: _cart.isEmpty
-                  ? const Center(child: Text('Cart is empty'))
-                  : ListView.builder(
-                      itemCount: _cart.length,
-                      itemBuilder: (context, index) {
-                        final item = _cart[index];
-                        return Card(
-                          child: ListTile(
-                            title: Text('Product: ${item.productId}'),
-                            subtitle:
-                                Text('Quantity: ${item.quantity}'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () => _removeItem(index),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+
+            Autocomplete<Map<String, dynamic>>(
+              optionsBuilder:
+                  (TextEditingValue textEditingValue) {
+                if (textEditingValue.text.isEmpty) {
+                  return const Iterable<
+                      Map<String, dynamic>>.empty();
+                }
+
+                return products.where((product) {
+                  final name =
+                      product["name"].toString().toLowerCase();
+                  return name.contains(
+                      textEditingValue.text.toLowerCase());
+                });
+              },
+              displayStringForOption: (option) =>
+                  "${option["name"]} (${option["quantity"]} ${option["unit"]})",
+              onSelected: (option) {
+                selectedProduct = option;
+              },
             ),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _completeSale,
-                child: _loading
-                    ? const CircularProgressIndicator()
-                    : const Text('Complete Sale'),
-              ),
+            const SizedBox(height: 20),
+
+            TextField(
+              controller: quantityController,
+              keyboardType: TextInputType.number,
+              decoration:
+                  const InputDecoration(labelText: "Quantity"),
+            ),
+
+            const SizedBox(height: 20),
+
+            ElevatedButton(
+              onPressed: addToCart,
+              child: const Text("Add"),
+            ),
+
+            const SizedBox(height: 20),
+
+            Text(
+              "Grand Total: ₹${grandTotal.toStringAsFixed(2)}",
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 20),
+
+            ElevatedButton(
+              onPressed: submitSale,
+              child: const Text("Complete Sale"),
             ),
           ],
         ),
       ),
     );
   }
-}
-
-class _CartItem {
-  final String productId;
-  final int quantity;
-
-  _CartItem({required this.productId, required this.quantity});
 }

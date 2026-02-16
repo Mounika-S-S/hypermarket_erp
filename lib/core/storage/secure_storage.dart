@@ -1,18 +1,25 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorage {
-  static const _storage = FlutterSecureStorage();
-  static const _tokenKey = 'jwt_token';
+  final _storage = const FlutterSecureStorage();
 
-  static Future<void> saveToken(String token) async {
-    await _storage.write(key: _tokenKey, value: token);
+  Future<void> saveToken(String token) async {
+    await _storage.write(key: "token", value: token);
   }
 
-  static Future<String?> getToken() async {
-    return await _storage.read(key: _tokenKey);
+  Future<String?> getToken() async {
+    return await _storage.read(key: "token");
   }
 
-  static Future<void> clear() async {
+  Future<void> saveRole(String role) async {
+    await _storage.write(key: "role", value: role);
+  }
+
+  Future<String?> getRole() async {
+    return await _storage.read(key: "role");
+  }
+
+  Future<void> clear() async {
     await _storage.deleteAll();
   }
 }

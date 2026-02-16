@@ -1,34 +1,51 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../constants.dart';
 import '../storage/secure_storage.dart';
 
 class ApiClient {
-  static const String baseUrl = "http://10.253.60.155:5000/api/v1";
+  final SecureStorage _storage = SecureStorage();
 
-  static Future<http.Response> post(
-    String path,
-    Map<String, dynamic> body,
-  ) async {
-    final token = await SecureStorage.getToken();
-
-    return http.post(
-      Uri.parse('$baseUrl$path'),
-      headers: {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(body),
-    );
+  Future<Map<String, String>> _headers() async {
+    final token = await _storage.getToken();
+    return {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer $token"
+    };
   }
 
-  static Future<http.Response> get(String path) async {
-    final token = await SecureStorage.getToken();
-
-    return http.get(
-      Uri.parse('$baseUrl$path'),
-      headers: {
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
+  Future<dynamic> get(String endpoint) async {
+    final response = await http.get(
+      Uri.parse("${AppConstants.baseUrl}$endpoint"),
+      headers: await _headers(),
     );
+    return jsonDecode(response.body);
+  }
+
+  Future<dynamic> post(String endpoint, Map data) async {
+  final response = await http.post(
+    Uri.parse("${AppConstants.baseUrl}$endpoint"),
+    headers: await _headers(),
+    body: jsonEncode(data),
+  );
+
+  print("STATUS: ${response.statusCode}");
+  print("BODY: ${response.body}");
+
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception("API Error: ${response.body}");
+  }
+}
+
+
+  Future<dynamic> put(String endpoint, Map data) async {
+    final response = await http.put(
+      Uri.parse("${AppConstants.baseUrl}$endpoint"),
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+    return jsonDecode(response.body);
   }
 }

@@ -1,36 +1,29 @@
-import 'dart:convert';
 import '../core/api/api_client.dart';
 import '../core/storage/secure_storage.dart';
 
 class AuthService {
-  static String? currentRole;
+  final ApiClient _api = ApiClient();
+  final SecureStorage _storage = SecureStorage();
 
-  static Future<bool> login(String email, String password) async {
-    final response = await ApiClient.post(
-      '/auth/login',
-      {
-        'email': email,
-        'password': password,
-      },
-    );
+Future<String?> login(String username, String password) async {
+  final response = await _api.post("/auth/login", {
+    "username": username,
+    "password": password
+  });
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+  print("LOGIN RESPONSE: $response");
 
-      await SecureStorage.saveToken(data['token']);
-      currentRole = data['user']['role'];
-
-      return true;
-    }
-    return false;
+  if (response["token"] != null) {
+    await _storage.saveToken(response["token"]);
+    await _storage.saveRole(response["role"]);
+    return response["role"];
   }
 
-  static bool isAdmin() => currentRole == 'admin';
-  static bool isManager() => currentRole == 'manager';
-  static bool isCashier() => currentRole == 'cashier';
+  return null;
+}
 
-  static Future<void> logout() async {
-    await SecureStorage.clear();
-    currentRole = null;
+
+  Future<void> logout() async {
+    await _storage.clear();
   }
 }

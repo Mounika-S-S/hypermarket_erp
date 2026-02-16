@@ -1,19 +1,21 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../core/api/api_client.dart';
 
 class InventoryService {
-  static Future<List<dynamic>> fetchInventory(String storeId) async {
-    final response = await ApiClient.get(
-      '/inventory?store_id=$storeId',
-    );
+  final ApiClient _api = ApiClient();
 
-    final decoded = json.decode(response.body);
+  Future<List<dynamic>> getBranches() async {
+    return await _api.get("/branches");
+  }
 
-    if (response.statusCode == 200 && decoded['error'] == false) {
-      return decoded['data'];
-    } else {
-      throw Exception('Failed to load inventory');
-    }
+  Future<List<dynamic>> getProducts(String branchId) async {
+    return await _api.get("/inventory/$branchId");
+  }
+
+  Future<void> addProduct(Map data) async {
+    await _api.post("/inventory", data);
+  }
+
+  Future<void> updateProduct(String id, Map data) async {
+    await _api.put("/inventory/$id", data);
   }
 }

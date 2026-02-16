@@ -1,18 +1,17 @@
 import '../core/api/api_client.dart';
 
 class SalesService {
-  static Future<bool> createSale(
-    String storeId,
-    List<Map<String, dynamic>> items,
-  ) async {
-    final response = await ApiClient.post(
-      '/sales',
-      {
-        'store_id': storeId,
-        'items': items,
-      },
-    );
+  final ApiClient _api = ApiClient();
 
-    return response.statusCode == 201;
+  Future<List<dynamic>> getBranches() async {
+    return await _api.get("/branches");
+  }
+
+  Future<List<dynamic>> getProducts(String branchId) async {
+    return await _api.get("/inventory/$branchId");
+  }
+
+  Future<dynamic> createSale(Map data) async {
+    return await _api.post("/sales", data);
   }
 }
