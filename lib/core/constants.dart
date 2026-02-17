@@ -1,3 +1,4 @@
 class AppConstants {
-  static const String baseUrl = "http://10.230.209.155:5000/api";
+  static const String baseUrl ="https://hypermarket-erp-backend.onrender.com/api";
+
 }
